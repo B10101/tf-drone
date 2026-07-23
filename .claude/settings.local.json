@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x /home/bett/Documents/drone/scripts/rpi_setup.sh)",
+      "Bash(python3 -m py_compile ros2_ws/src/payload_release/payload_release/servo_driver.py ros2_ws/src/payload_release/payload_release/release_node.py ros2_ws/src/payload_release/setup.py ros2_ws/src/payload_release/launch/payload_release.launch.py ros2_ws/src/drone_bringup/setup.py ros2_ws/src/drone_bringup/launch/mavros_pixhawk.launch.py ros2_ws/src/drone_bringup/launch/full_system.launch.py)"
+    ]
+  }
+}
