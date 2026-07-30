@@ -37,8 +37,10 @@ for the reasoning and the physical wiring.
   link-loss watchdog that fails closed and debounced switch input.
 - `ros2_ws/src/drone_bringup/` - launch files that start MAVROS pointed at
   the Pixhawk, and a combined launch bringing up the whole stack.
-- `scripts/rpi_setup.sh` - one-time Raspberry Pi provisioning (ROS2 Humble,
-  MAVROS, pigpio, UART enablement).
+- `scripts/rpi_setup.sh` - one-time Raspberry Pi device/config setup (UART
+  enablement, pigpiod). Package installs (ROS2, MAVROS, gpiozero, pigpio)
+  are listed separately, printed at the end of the script - see
+  `docs/rpi_manual_installs.md`.
 - `docs/wiring.md` - physical wiring for all links (RC, telemetry, and the
   Pi-to-L293N-to-motor release wiring) and power distribution notes.
 - `docs/px4_params_heavy_lift.md` - PX4 parameter checklist to review for a
@@ -54,7 +56,9 @@ for the reasoning and the physical wiring.
    QGroundControl before connecting the companion computer. PX4's only role
    in the release feature is decoding the FlySky switch as an RC channel
    (normal radio calibration) - the rest happens on the Pi.
-3. **Provision the Pi** - flash Ubuntu Server 22.04 (arm64), then:
+3. **Provision the Pi** - flash Ubuntu Server 22.04 (arm64), install the
+   packages in `docs/rpi_manual_installs.md`, then run the device/config
+   script:
    ```
    ./scripts/rpi_setup.sh
    ```

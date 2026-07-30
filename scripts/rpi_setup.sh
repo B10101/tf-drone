@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# One-time setup for the Raspberry Pi companion computer.
+# One-time device/config setup for the Raspberry Pi companion computer.
+#
+# This script does NOT install packages - see the "Manual installs" list
+# printed at the end (or docs/rpi_manual_installs.md) for what to apt
+# install yourself first. This only handles config that isn't a package
+# install: enabling the UART for Pixhawk telemetry, freeing it from the
+# Linux serial console, and enabling the pigpiod service.
 #
 # Target OS: Ubuntu Server 22.04 LTS (arm64) on the Raspberry Pi.
-# ROS2 Humble only ships official binaries for Ubuntu 22.04 - Raspberry Pi OS
-# (Debian-based) would mean building ROS2 from source. Flash Ubuntu Server
-# 22.04 arm64 with Raspberry Pi Imager instead; it runs fine headless.
 #
 # Run as the regular user (not root); the script uses sudo where needed.
 
@@ -23,30 +26,18 @@ fi
 sudo systemctl disable --now serial-getty@ttyAMA0.service 2>/dev/null || true
 sudo raspi-config nonint do_serial_hw 0 2>/dev/null || true
 
-echo "== Installing ROS2 Humble =="
-sudo apt update
-sudo apt install -y curl gnupg lsb-release
-sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-  -o /usr/share/keyrings/ros-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
-http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" \
-  | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-
-sudo apt update
-sudo apt install -y ros-humble-ros-base python3-colcon-common-extensions python3-rosdep
-
-echo "== Installing MAVROS and GeographicLib datasets =="
-sudo apt install -y ros-humble-mavros ros-humble-mavros-extras
-sudo bash /opt/ros/humble/share/mavros/scripts/install_geographiclib_datasets.sh
-
-echo "== Installing servo/GPIO and pigpio support =="
-sudo apt install -y python3-gpiozero python3-pigpio pigpio
+echo "== Enabling pigpiod (requires the pigpio package - see manual installs below) =="
 sudo systemctl enable --now pigpiod
-
-echo "== Initializing rosdep =="
-sudo rosdep init 2>/dev/null || true
-rosdep update
 
 echo
 echo "Done. Log out/in (or reboot) so the UART and pigpio group changes take effect."
-echo "Next: colcon build the workspace in ros2_ws/, then source install/setup.bash."
+echo
+echo "== Manual installs still needed (if not already done) =="
+echo "  sudo apt install -y python3-colcon-common-extensions python3-rosdep"
+echo "  sudo apt install -y ros-humble-mavros ros-humble-mavros-extras"
+echo "  sudo bash /opt/ros/humble/share/mavros/scripts/install_geographiclib_datasets.sh"
+echo "  sudo apt install -y python3-gpiozero python3-pigpio pigpio"
+echo "  sudo rosdep init  # ok if it errors saying it's already initialized"
+echo "  rosdep update"
+echo
+echo "Then: colcon build the workspace in ros2_ws/, and source install/setup.bash."
