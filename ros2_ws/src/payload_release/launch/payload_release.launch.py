@@ -6,13 +6,22 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument('gpio_pin', default_value='18',
-                               description='RPi BCM GPIO pin driving the release servo (18 = hardware PWM).'),
-        DeclareLaunchArgument('closed_angle', default_value='0.0'),
-        DeclareLaunchArgument('open_angle', default_value='90.0'),
-        DeclareLaunchArgument('use_pigpio', default_value='true',
-                               description='Use the pigpio daemon for jitter-free PWM (recommended). '
-                                            'Requires `sudo pigpiod` running.'),
+        DeclareLaunchArgument('in1_pin', default_value='23',
+                               description='RPi BCM GPIO pin -> L293N IN1.'),
+        DeclareLaunchArgument('in2_pin', default_value='24',
+                               description='RPi BCM GPIO pin -> L293N IN2.'),
+        DeclareLaunchArgument('ena_pin', default_value='-1',
+                               description='RPi BCM GPIO pin -> L293N ENA, or -1 if ENA is '
+                                            'tied high externally (e.g. the board\'s own jumper).'),
+        DeclareLaunchArgument('speed', default_value='1.0',
+                               description='Motor speed 0.0-1.0, only meaningful if ena_pin is set.'),
+        DeclareLaunchArgument('open_duration_sec', default_value='1.0',
+                               description='How long to run the motor forward to release the payload.'),
+        DeclareLaunchArgument('close_duration_sec', default_value='1.0',
+                               description='How long to run the motor backward to reset the latch.'),
+        DeclareLaunchArgument('use_pigpio', default_value='false',
+                               description='Use the pigpio daemon for the ENA PWM pin (only relevant '
+                                            'if ena_pin is set). Requires `sudo pigpiod` running.'),
         DeclareLaunchArgument('rc_channel_index', default_value='6',
                                description='0-based index into mavros RCIn.channels for the release switch.'),
         DeclareLaunchArgument('rc_open_threshold_us', default_value='1700'),
@@ -26,9 +35,12 @@ def generate_launch_description():
             name='payload_release_node',
             output='screen',
             parameters=[{
-                'gpio_pin': LaunchConfiguration('gpio_pin'),
-                'closed_angle': LaunchConfiguration('closed_angle'),
-                'open_angle': LaunchConfiguration('open_angle'),
+                'in1_pin': LaunchConfiguration('in1_pin'),
+                'in2_pin': LaunchConfiguration('in2_pin'),
+                'ena_pin': LaunchConfiguration('ena_pin'),
+                'speed': LaunchConfiguration('speed'),
+                'open_duration_sec': LaunchConfiguration('open_duration_sec'),
+                'close_duration_sec': LaunchConfiguration('close_duration_sec'),
                 'use_pigpio': LaunchConfiguration('use_pigpio'),
                 'rc_channel_index': LaunchConfiguration('rc_channel_index'),
                 'rc_open_threshold_us': LaunchConfiguration('rc_open_threshold_us'),

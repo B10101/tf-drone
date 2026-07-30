@@ -50,19 +50,35 @@ field. Treat this as a checklist of what to touch, not a config file.
 - `MAV_1_CONFIG = TELEM2`, `MAV_1_MODE = Onboard`, `SER_TEL2_BAUD = 921600`
   (or whichever port/baud you wired per `docs/wiring.md`) - this is the link
   `mavros_pixhawk.launch.py` connects over.
-- Nothing in this project sends flight-mode or actuator commands from the
-  Pi to the flight controller - MAVROS here is used read-only (RC/state/
-  battery telemetry) plus the independent servo GPIO for payload release.
-  If you later add autonomous mission logic on the Pi, revisit
-  `COM_OBL_ACT`/`COM_OBL_RC_ACT` and add an explicit offboard-loss failsafe
-  test before flying it.
+- MAVROS is used read-only here (RC/state/battery telemetry) - the Pi never
+  sends flight-mode or actuator commands to the flight controller. It does
+  drive the payload-release motor, but that's over the Pi's own GPIO to the
+  L293N, not through the Pixhawk at all (see `docs/wiring.md` section 3) -
+  so a bug in that code still can't affect flight control, only the
+  release mechanism.
+- If you later add autonomous mission logic on the Pi (waypoint/offboard
+  control), revisit `COM_OBL_ACT`/`COM_OBL_RC_ACT` and add an explicit
+  offboard-loss failsafe test before flying it - today nothing here
+  triggers those paths.
+
+## 5. Payload release (handled by the Pi, not PX4)
+The release motor is driven from the Raspberry Pi's GPIO through an L293N
+H-bridge - see `docs/wiring.md` section 3 for the physical wiring and why
+it's Pi-driven rather than a Pixhawk AUX output (an L293N wants clean
+digital direction pins, not a servo-style PWM signal).
+
+PX4's only role in this feature is decoding the FlySky release switch as an
+RC channel (automatic, no config beyond normal RC calibration) - MAVROS on
+the Pi reads that channel back and the `payload_release` node does the
+rest. There's nothing to configure in QGC's Actuators page for this.
 
 ## Before the first flight with a real payload
-1. Bench-test the release servo (via the `~/drop` and `~/reset` services)
-   with props off.
-2. Verify the FlySky release switch actuates the servo through the full
-   RC path (transmitter -> receiver -> Pixhawk -> MAVROS -> release node).
+1. Bench-test the release motor via the `~/drop` and `~/reset` services
+   with props off, ideally with the mechanism off the aircraft first so a
+   mistimed pulse doesn't slam a hard stop under load.
+2. Verify the FlySky release switch actuates the motor through the full RC
+   path (transmitter -> receiver -> Pixhawk -> MAVROS -> release node).
 3. Pull the RPi's telemetry cable mid-test and confirm the release node's
-   watchdog force-closes the latch (see `docs/safety_checklist.md`).
+   watchdog forces a close pulse (see `docs/safety_checklist.md`).
 4. Fly empty first, then fly with the payload at increasing weight, checking
    hover throttle and control response each step.

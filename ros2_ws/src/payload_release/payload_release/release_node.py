@@ -1,4 +1,4 @@
-"""ROS2 node that controls the payload-release servo.
+"""ROS2 node that controls the payload-release motor (via an L293N H-bridge).
 
 Two independent trigger paths are supported:
 
@@ -7,15 +7,22 @@ Two independent trigger paths are supported:
    lets the pilot release the payload by hand, the same way they fly the
    rest of the aircraft.
 2. A `std_srvs/Trigger` service pair (`~/drop`, `~/reset`) for bench testing
-   or for a future companion-computer mission node to call.
+   or for a future mission node to call.
+
+Unlike a servo, the L293N-driven motor has no absolute position feedback -
+"open" and "close" are timed pulses (run for `open_duration_sec` /
+`close_duration_sec`, then stop), not a held angle. This assumes the
+mechanism has a mechanical hard stop at both ends of travel, so a pulse
+issued when already at that end is harmless - verify that on the bench
+before trusting it in the air.
 
 Safety behaviour:
 - If RC data stops arriving (link lost) for longer than `rc_timeout_sec`,
-  the node forces the servo closed and stops trusting RC until fresh data
+  the node forces a close pulse and stops trusting RC until fresh data
   arrives. A dropped link should never leave the hook open.
 - The RC channel needs to hold past the open/close thresholds for
   `debounce_sec` before a state change is actuated, so signal noise near the
-  threshold can't chatter the servo.
+  threshold can't chatter the motor.
 """
 
 import time
@@ -25,7 +32,7 @@ from rclpy.node import Node
 from std_msgs.msg import Bool
 from std_srvs.srv import Trigger
 
-from payload_release.servo_driver import PayloadServo
+from payload_release.motor_driver import PayloadMotor
 
 try:
     from mavros_msgs.msg import RCIn
@@ -37,10 +44,13 @@ class ReleaseNode(Node):
     def __init__(self):
         super().__init__('payload_release_node')
 
-        self.declare_parameter('gpio_pin', 18)
-        self.declare_parameter('closed_angle', 0.0)
-        self.declare_parameter('open_angle', 90.0)
-        self.declare_parameter('use_pigpio', True)
+        self.declare_parameter('in1_pin', 23)
+        self.declare_parameter('in2_pin', 24)
+        self.declare_parameter('ena_pin', -1)  # -1 = ENA tied high externally
+        self.declare_parameter('speed', 1.0)
+        self.declare_parameter('open_duration_sec', 1.0)
+        self.declare_parameter('close_duration_sec', 1.0)
+        self.declare_parameter('use_pigpio', False)
         self.declare_parameter('rc_channel_index', 6)  # 0-based; channel 7
         self.declare_parameter('rc_open_threshold_us', 1700)
         self.declare_parameter('rc_close_threshold_us', 1300)
@@ -52,11 +62,14 @@ class ReleaseNode(Node):
         self._close_us = self.get_parameter('rc_close_threshold_us').value
         self._rc_timeout = self.get_parameter('rc_timeout_sec').value
         self._debounce_sec = self.get_parameter('debounce_sec').value
+        self._open_duration = self.get_parameter('open_duration_sec').value
+        self._close_duration = self.get_parameter('close_duration_sec').value
 
-        self._servo = PayloadServo(
-            gpio_pin=self.get_parameter('gpio_pin').value,
-            closed_angle=self.get_parameter('closed_angle').value,
-            open_angle=self.get_parameter('open_angle').value,
+        self._motor = PayloadMotor(
+            in1_pin=self.get_parameter('in1_pin').value,
+            in2_pin=self.get_parameter('in2_pin').value,
+            ena_pin=self.get_parameter('ena_pin').value,
+            speed=self.get_parameter('speed').value,
             use_pigpio=self.get_parameter('use_pigpio').value,
         )
 
@@ -64,6 +77,7 @@ class ReleaseNode(Node):
         self._last_rc_stamp = None
         self._pending_state = None
         self._pending_since = None
+        self._motor_stop_at = None
 
         self._state_pub = self.create_publisher(Bool, '~/state', 10)
 
@@ -78,7 +92,7 @@ class ReleaseNode(Node):
         self.create_service(Trigger, '~/drop', self._on_drop_srv)
         self.create_service(Trigger, '~/reset', self._on_reset_srv)
 
-        self.create_timer(0.2, self._watchdog)
+        self.create_timer(0.1, self._periodic)
 
         self._publish_state()
         self.get_logger().info('Payload release node ready (latch closed).')
@@ -120,10 +134,16 @@ class ReleaseNode(Node):
             self._set_state(desired)
             self._pending_state = None
 
-    def _watchdog(self) -> None:
+    def _periodic(self) -> None:
+        now = time.monotonic()
+
+        if self._motor_stop_at is not None and now >= self._motor_stop_at:
+            self._motor.stop()
+            self._motor_stop_at = None
+
         if self._last_rc_stamp is None:
             return
-        age = time.monotonic() - self._last_rc_stamp
+        age = now - self._last_rc_stamp
         if age > self._rc_timeout and self._is_open:
             self.get_logger().error(
                 f'RC link stale for {age:.1f}s - forcing payload latch closed.'
@@ -131,11 +151,14 @@ class ReleaseNode(Node):
             self._set_state(False)
 
     def _set_state(self, open_state: bool) -> None:
+        now = time.monotonic()
         if open_state:
-            self._servo.open()
+            self._motor.run_open()
+            self._motor_stop_at = now + self._open_duration
             self.get_logger().info('Payload latch OPEN - release triggered.')
         else:
-            self._servo.close()
+            self._motor.run_close()
+            self._motor_stop_at = now + self._close_duration
             self.get_logger().info('Payload latch CLOSED.')
         self._is_open = open_state
         self._publish_state()
