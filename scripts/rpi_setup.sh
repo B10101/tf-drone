@@ -26,8 +26,9 @@ fi
 sudo systemctl disable --now serial-getty@ttyAMA0.service 2>/dev/null || true
 sudo raspi-config nonint do_serial_hw 0 2>/dev/null || true
 
-echo "== Enabling pigpiod (requires the pigpio package - see manual installs below) =="
-sudo systemctl enable --now pigpiod
+echo "== Enabling pigpiod (optional - only if you installed pigpio; see below) =="
+sudo systemctl enable --now pigpiod 2>/dev/null || \
+  echo "pigpiod not installed/available - skipping (fine unless you're using ena_pin for variable motor speed)."
 
 echo
 echo "Done. Log out/in (or reboot) so the UART and pigpio group changes take effect."
@@ -36,8 +37,13 @@ echo "== Manual installs still needed (if not already done) =="
 echo "  sudo apt install -y python3-colcon-common-extensions python3-rosdep"
 echo "  sudo apt install -y ros-humble-mavros ros-humble-mavros-extras"
 echo "  sudo bash /opt/ros/humble/share/mavros/scripts/install_geographiclib_datasets.sh"
-echo "  sudo apt install -y python3-gpiozero python3-pigpio pigpio"
+echo "  sudo apt install -y python3-gpiozero"
 echo "  sudo rosdep init  # ok if it errors saying it's already initialized"
 echo "  rosdep update"
+echo
+echo "  (Optional, only for variable-speed motor control via ena_pin:"
+echo "   sudo apt install -y python3-pigpio pigpio -- may not be available on"
+echo "   newer Ubuntu/Debian since upstream pigpio is unmaintained. Skip it;"
+echo "   the default ena_pin=-1 (ENA tied high) doesn't need it.)"
 echo
 echo "Then: colcon build the workspace in ros2_ws/, and source install/setup.bash."

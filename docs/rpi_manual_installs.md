@@ -19,12 +19,23 @@ sudo apt install -y ros-humble-mavros ros-humble-mavros-extras
 sudo bash /opt/ros/humble/share/mavros/scripts/install_geographiclib_datasets.sh
 
 # GPIO/motor control support (payload_release)
-sudo apt install -y python3-gpiozero python3-pigpio pigpio
+sudo apt install -y python3-gpiozero
 
 # rosdep (one-time init, then update)
 sudo rosdep init   # ok if it errors saying it's already initialized
 rosdep update
 ```
+
+**About `pigpio`** - deliberately left out above. It's only needed for
+jitter-free PWM, which only matters here if you wire `ena_pin` for
+variable-speed motor control (the default `ena_pin: -1` ties ENA high
+instead - IN1/IN2 are plain digital signals, no PWM involved, so
+`pigpio` buys nothing in the default config). It's also been dropped from
+some newer Ubuntu/Debian repos since upstream is unmaintained - if
+`apt install pigpio` fails with "no installation candidate", that's why.
+If you do need it later: `sudo apt install -y python3-pigpio pigpio`, or
+build it from source from the archived upstream repo if your distro
+doesn't carry it.
 
 **Quick check that everything's present:**
 ```bash
