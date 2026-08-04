@@ -74,19 +74,39 @@ Pi) - the crash reproduces identically with everything else stopped, and
 happens purely inside the single `mavros_node` process. It's deterministic
 on every startup with this MAVROS build (2.14.0, built 2026-06-08).
 
-Try, in order:
-1. **Update MAVROS** - this may already be fixed in a newer build:
-   ```bash
-   sudo apt update
-   sudo apt upgrade -y ros-humble-mavros ros-humble-mavros-extras
-   ```
-2. **Deny-list the `sys_status` plugin** as a workaround:
-   ```bash
-   ros2 launch drone_bringup mavros_pixhawk.launch.py fcu_url:=/dev/ttyACM0 plugin_denylist:=sys_status
-   ```
-   Caveat: in most MAVROS versions, `sys_status` is also what publishes
-   `/mavros/state` and `/mavros/battery` - denylisting it will blank those
-   fields out in `telemetry_logger`. GPS and RC-channel data (separate
-   plugins) keep working, so the release-switch feature is unaffected -
-   this just isn't a full fix, it's an "unblock testing while waiting on
-   upstream" workaround.
+It's also **not limited to one plugin** - `companion_process_status` was
+the first to crash it, but deny-listing that just moved the identical crash
+to `debug_value` next. Both publish+subscribe on a self-referential topic
+name (`mavros/mavros/status`, `mavros/mavros/send`), which is the pattern
+that seems to trigger it - there may be more affected plugins further down
+the list that we never reached.
+
+**Resolved** by switching from deny-listing (whack-a-mole, unknown how many
+broken plugins exist) to an **allowlist** of only the plugins this project
+actually needs. This is now the default in `mavros_pixhawk.launch.py` -
+`plugin_allowlist` defaults to `sys_status,global_position,rc_io`, so
+`mavros_node` never attempts to load any of the broken plugins in the first
+place. Confirmed working: MAVROS connects cleanly
+(`CON: Got HEARTBEAT, connected. FCU: PX4 Autopilot`), state/battery/GPS/RC
+all populate in `telemetry_logger`.
+
+You'll still see `VER: autopilot version service timeout` /
+`command plugin service call failed!` a few times right after connecting -
+that's harmless, just the (intentionally excluded) `command` plugin not
+being there to answer a version-check service call. MAVROS retries a few
+times, falls back to default capabilities, and moves on; doesn't affect
+telemetry or payload release.
+
+If you need a plugin beyond these three later (e.g. `command` for
+arming/mode control, if you add autonomous mission logic on the Pi down
+the line), add it to `plugin_allowlist` and test it in isolation first -
+it may or may not be one of the plugins that crashes on this build.
+
+Still worth trying periodically, since this all looks like an upstream
+packaging bug that should get fixed eventually:
+```bash
+sudo apt update
+sudo apt upgrade -y ros-humble-mavros ros-humble-mavros-extras
+```
+If a fixed build ever lands, `plugin_allowlist` can be cleared back to `''`
+to load MAVROS's full default plugin set again.

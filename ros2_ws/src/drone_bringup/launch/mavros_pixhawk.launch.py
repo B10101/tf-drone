@@ -64,11 +64,13 @@ def generate_launch_description():
                         "docs/troubleshooting.md). Empty = load all default plugins.",
         ),
         DeclareLaunchArgument(
-            'plugin_allowlist', default_value='',
-            description="Comma-separated MAVROS plugin names to exclusively load, e.g. "
-                        "'sys_status,global_position,rc_io' - alternative workaround to "
-                        "plugin_denylist when multiple plugins hit the same startup crash "
-                        "(see docs/troubleshooting.md). Empty = no allowlist restriction.",
+            'plugin_allowlist', default_value='sys_status,global_position,rc_io',
+            description="Comma-separated MAVROS plugin names to exclusively load. Defaults to "
+                        "just what this project needs (state/battery, GPS, RC channels) - "
+                        "several other plugins (companion_process_status, debug_value, and "
+                        "possibly more) hard-crash mavros_node on startup on this MAVROS "
+                        "build, see docs/troubleshooting.md. Set to empty ('') to load all "
+                        "default plugins instead (will likely crash until upstream fixes it).",
         ),
 
         OpaqueFunction(function=_launch_setup),
