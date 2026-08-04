@@ -36,7 +36,9 @@ for the reasoning and the physical wiring.
   via MAVROS RC passthrough) or a `std_srvs/Trigger` service, with a
   link-loss watchdog that fails closed and debounced switch input.
 - `ros2_ws/src/drone_bringup/` - launch files that start MAVROS pointed at
-  the Pixhawk, and a combined launch bringing up the whole stack.
+  the Pixhawk, a `telemetry_logger` node that logs a periodic
+  state/battery/GPS/altitude/RC summary to the terminal, and a combined
+  launch bringing up the whole stack.
 - `scripts/rpi_setup.sh` - one-time Raspberry Pi device/config setup (UART
   enablement, pigpiod). Package installs (ROS2, MAVROS, gpiozero, pigpio)
   are listed separately, printed at the end of the script - see
@@ -87,6 +89,19 @@ for the reasoning and the physical wiring.
 ros2 service call /payload_release_node/drop std_srvs/srv/Trigger {}
 ros2 service call /payload_release_node/reset std_srvs/srv/Trigger {}
 ```
+
+## Telemetry logging
+
+`full_system.launch.py` already brings this up alongside MAVROS and
+payload release. To run it standalone (e.g. with just MAVROS up):
+
+```
+ros2 launch drone_bringup telemetry_logger.launch.py
+```
+
+Logs one summary line per second (connection/armed/mode, battery
+voltage+percentage, GPS fix+position, relative altitude, RC channel 1 +
+RSSI) - adjust with the `rate_hz` launch argument.
 
 ## Status / what's not here yet
 

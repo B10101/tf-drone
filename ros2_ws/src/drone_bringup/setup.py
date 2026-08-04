@@ -22,5 +22,9 @@ setup(
     description='Top-level launch files for the heavy-lift drone companion computer (MAVROS + payload release).',
     license='Apache-2.0',
     tests_require=['pytest'],
-    entry_points={'console_scripts': []},
+    entry_points={
+        'console_scripts': [
+            'telemetry_logger = drone_bringup.telemetry_logger:main',
+        ],
+    },
 )

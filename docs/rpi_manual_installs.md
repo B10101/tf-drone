@@ -16,7 +16,17 @@ sudo apt install -y python3-colcon-common-extensions python3-rosdep
 
 # MAVROS (talks to the Pixhawk over MAVLink)
 sudo apt install -y ros-humble-mavros ros-humble-mavros-extras
-sudo bash /opt/ros/humble/share/mavros/scripts/install_geographiclib_datasets.sh
+
+# GeographicLib dataset (used by one MAVROS plugin for GPS altitude/geoid
+# conversion - not required for RC telemetry or the release feature).
+# MAVROS ships a wrapper script for this, but its path has moved between
+# versions - if this exact path 404s, `find /opt/ros/humble -iname
+# "*geographiclib*"` to locate it, or just skip the wrapper and fetch the
+# dataset directly:
+#   sudo apt install -y geographiclib-tools
+#   sudo geographiclib-get-geoids egm96-5
+sudo bash /opt/ros/humble/share/mavros/scripts/install_geographiclib_datasets.sh \
+  || (sudo apt install -y geographiclib-tools && sudo geographiclib-get-geoids egm96-5)
 
 # GPIO/motor control support (payload_release)
 sudo apt install -y python3-gpiozero
