@@ -19,18 +19,24 @@ def _launch_setup(context, *args, **kwargs):
     denylist_str = LaunchConfiguration('plugin_denylist').perform(context)
     plugin_denylist = [p.strip() for p in denylist_str.split(',') if p.strip()]
 
+    params = {
+        'fcu_url': LaunchConfiguration('fcu_url'),
+        'gcs_url': LaunchConfiguration('gcs_url'),
+        'target_system_id': LaunchConfiguration('target_system_id'),
+        'target_component_id': LaunchConfiguration('target_component_id'),
+    }
+    # An empty list fails ROS2 parameter type validation (can't infer the
+    # array's element type from zero elements) - only set this when there's
+    # actually something to deny.
+    if plugin_denylist:
+        params['plugin_denylist'] = plugin_denylist
+
     return [Node(
         package='mavros',
         executable='mavros_node',
         name='mavros',
         output='screen',
-        parameters=[{
-            'fcu_url': LaunchConfiguration('fcu_url'),
-            'gcs_url': LaunchConfiguration('gcs_url'),
-            'target_system_id': LaunchConfiguration('target_system_id'),
-            'target_component_id': LaunchConfiguration('target_component_id'),
-            'plugin_denylist': plugin_denylist,
-        }],
+        parameters=[params],
     )]
 
 
