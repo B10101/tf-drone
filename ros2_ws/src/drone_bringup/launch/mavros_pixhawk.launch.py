@@ -19,6 +19,9 @@ def _launch_setup(context, *args, **kwargs):
     denylist_str = LaunchConfiguration('plugin_denylist').perform(context)
     plugin_denylist = [p.strip() for p in denylist_str.split(',') if p.strip()]
 
+    allowlist_str = LaunchConfiguration('plugin_allowlist').perform(context)
+    plugin_allowlist = [p.strip() for p in allowlist_str.split(',') if p.strip()]
+
     params = {
         'fcu_url': LaunchConfiguration('fcu_url'),
         'gcs_url': LaunchConfiguration('gcs_url'),
@@ -26,10 +29,12 @@ def _launch_setup(context, *args, **kwargs):
         'target_component_id': LaunchConfiguration('target_component_id'),
     }
     # An empty list fails ROS2 parameter type validation (can't infer the
-    # array's element type from zero elements) - only set this when there's
-    # actually something to deny.
+    # array's element type from zero elements) - only set these when there's
+    # actually something to deny/allow.
     if plugin_denylist:
         params['plugin_denylist'] = plugin_denylist
+    if plugin_allowlist:
+        params['plugin_allowlist'] = plugin_allowlist
 
     return [Node(
         package='mavros',
@@ -57,6 +62,13 @@ def generate_launch_description():
             description="Comma-separated MAVROS plugin names to disable, e.g. 'sys_status' - "
                         "workaround for a startup crash on some MAVROS builds (see "
                         "docs/troubleshooting.md). Empty = load all default plugins.",
+        ),
+        DeclareLaunchArgument(
+            'plugin_allowlist', default_value='',
+            description="Comma-separated MAVROS plugin names to exclusively load, e.g. "
+                        "'sys_status,global_position,rc_io' - alternative workaround to "
+                        "plugin_denylist when multiple plugins hit the same startup crash "
+                        "(see docs/troubleshooting.md). Empty = no allowlist restriction.",
         ),
 
         OpaqueFunction(function=_launch_setup),

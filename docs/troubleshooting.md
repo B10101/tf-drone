@@ -68,6 +68,12 @@ conflicting types; see the similar (though not identical - that one's on
 the composable-node path, MAVROS 2.8.0) report at
 [mavlink/mavros#1977](https://github.com/mavlink/mavros/issues/1977).
 
+Confirmed on this setup: it's **not** caused by another ROS node running
+concurrently (e.g. a separate `cerebro_bridge` node also connected to this
+Pi) - the crash reproduces identically with everything else stopped, and
+happens purely inside the single `mavros_node` process. It's deterministic
+on every startup with this MAVROS build (2.14.0, built 2026-06-08).
+
 Try, in order:
 1. **Update MAVROS** - this may already be fixed in a newer build:
    ```bash
