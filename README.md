@@ -45,6 +45,9 @@ for the reasoning and the physical wiring.
   `docs/rpi_manual_installs.md`.
 - `docs/wiring.md` - physical wiring for all links (RC, telemetry, and the
   Pi-to-L293N-to-motor release wiring) and power distribution notes.
+- `docs/troubleshooting.md` - real issues hit bringing this up on actual
+  Pi + Pixhawk hardware (GPIO/USB permissions, GeographicLib, a MAVROS
+  startup crash) and their fixes.
 - `docs/px4_params_heavy_lift.md` - PX4 parameter checklist to review for a
   heavy-lift airframe (not paste-in values - these depend on your build).
 - `docs/safety_checklist.md` - test order and standing safety rules, given

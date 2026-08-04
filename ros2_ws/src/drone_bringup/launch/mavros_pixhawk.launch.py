@@ -10,9 +10,28 @@ matching PX4 params on the Pixhawk side (see docs/wiring.md):
 """
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+
+
+def _launch_setup(context, *args, **kwargs):
+    denylist_str = LaunchConfiguration('plugin_denylist').perform(context)
+    plugin_denylist = [p.strip() for p in denylist_str.split(',') if p.strip()]
+
+    return [Node(
+        package='mavros',
+        executable='mavros_node',
+        name='mavros',
+        output='screen',
+        parameters=[{
+            'fcu_url': LaunchConfiguration('fcu_url'),
+            'gcs_url': LaunchConfiguration('gcs_url'),
+            'target_system_id': LaunchConfiguration('target_system_id'),
+            'target_component_id': LaunchConfiguration('target_component_id'),
+            'plugin_denylist': plugin_denylist,
+        }],
+    )]
 
 
 def generate_launch_description():
@@ -27,17 +46,12 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument('target_system_id', default_value='1'),
         DeclareLaunchArgument('target_component_id', default_value='1'),
-
-        Node(
-            package='mavros',
-            executable='mavros_node',
-            name='mavros',
-            output='screen',
-            parameters=[{
-                'fcu_url': LaunchConfiguration('fcu_url'),
-                'gcs_url': LaunchConfiguration('gcs_url'),
-                'target_system_id': LaunchConfiguration('target_system_id'),
-                'target_component_id': LaunchConfiguration('target_component_id'),
-            }],
+        DeclareLaunchArgument(
+            'plugin_denylist', default_value='',
+            description="Comma-separated MAVROS plugin names to disable, e.g. 'sys_status' - "
+                        "workaround for a startup crash on some MAVROS builds (see "
+                        "docs/troubleshooting.md). Empty = load all default plugins.",
         ),
+
+        OpaqueFunction(function=_launch_setup),
     ])
