@@ -36,7 +36,8 @@ class TelemetryLogger(Node):
             NavSatFix, '/mavros/global_position/global', self._on_gps, qos_profile_sensor_data)
         self.create_subscription(
             Float64, '/mavros/global_position/rel_alt', self._on_rel_alt, qos_profile_sensor_data)
-        self.create_subscription(RCIn, '/mavros/rc/in', self._on_rc, 10)
+        self.create_subscription(
+            RCIn, '/mavros/rc/in', self._on_rc, qos_profile_sensor_data)
 
         rate_hz = self.get_parameter('rate_hz').value
         self.create_timer(1.0 / rate_hz, self._log_summary)

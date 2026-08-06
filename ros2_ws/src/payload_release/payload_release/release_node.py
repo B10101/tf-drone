@@ -29,6 +29,7 @@ import time
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import Bool
 from std_srvs.srv import Trigger
 
@@ -82,7 +83,8 @@ class ReleaseNode(Node):
         self._state_pub = self.create_publisher(Bool, '~/state', 10)
 
         if RCIn is not None:
-            self.create_subscription(RCIn, '/mavros/rc/in', self._on_rc, 10)
+            self.create_subscription(
+                RCIn, '/mavros/rc/in', self._on_rc, qos_profile_sensor_data)
         else:
             self.get_logger().warn(
                 'mavros_msgs not available - RC trigger path disabled, '

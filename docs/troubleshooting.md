@@ -110,3 +110,18 @@ sudo apt upgrade -y ros-humble-mavros ros-humble-mavros-extras
 ```
 If a fixed build ever lands, `plugin_allowlist` can be cleared back to `''`
 to load MAVROS's full default plugin set again.
+
+## `telemetry_logger`/`payload_release` show `rc=waiting...` even though RC is definitely connected
+If MAVROS is connected (`conn=True`) and you've confirmed RC actually works
+(e.g. you can throttle motors with it), but `/mavros/rc/in` never populates
+in our nodes, it's a QoS mismatch, not a wiring/connection problem. MAVROS
+publishes high-rate topics like RC channels with best-effort
+(`SensorDataQoS`) - a subscriber requesting the ROS2 default `RELIABLE`
+QoS can't receive from a best-effort publisher, and it fails *silently*
+(no error, just zero messages received).
+
+Fixed in this repo by subscribing to `RCIn` with `qos_profile_sensor_data`
+(best-effort) in both `release_node.py` and `telemetry_logger.py`, matching
+what was already done for battery/GPS. If you add any other MAVROS
+subscription later and it silently never receives anything despite the
+topic clearly being published, check this first.
