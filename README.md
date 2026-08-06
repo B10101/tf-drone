@@ -104,7 +104,14 @@ ros2 launch drone_bringup telemetry_logger.launch.py
 
 Logs one summary line per second (connection/armed/mode, battery
 voltage+percentage, GPS fix+position, relative altitude, RC channel 1 +
-RSSI) - adjust with the `rate_hz` launch argument.
+RSSI, and commanded motor PWM output) - adjust with the `rate_hz` launch
+argument.
+
+The motor output field is PX4's *commanded* PWM to each ESC, not measured
+feedback - this project's ESCs (Hobbywing SkyWalker V2) have no telemetry
+return wire, so there's no actual RPM/current/temperature to read. Real ESC
+telemetry would need different hardware (e.g. Hobbywing's CAN-bus XRotor/
+Platinum Pro line, or BLHeli32/KISS/bidirectional-DShot ESCs).
 
 ## Status / what's not here yet
 
